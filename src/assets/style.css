@@ -1,0 +1,121 @@
+html {
+  margin: 0;
+  padding: 0;
+  background-image: linear-gradient(to right, #fc5c7d, #6a82fb);
+  font-family: sans-serif;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+  scroll-padding-block-start: 100px;
+}
+main {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translateX(-50%) translateY(-50%);
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 350px;
+  padding: 1rem;
+  border-radius: 1rem;
+  background-color: #ffffff;
+  color: var(--grey-darkest);
+}
+.input,
+button {
+  border-radius: 0.3rem;
+}
+.input > label,
+.input > input,
+.button {
+  box-sizing: border-box;
+}
+.input {
+  background-color: #ffffff;
+  border: 1px solid #7a848d;
+  height: 3.5rem;
+  max-width: 100%;
+  margin: 0px 0px 0.3rem;
+  position: relative;
+}
+.input:focus-within {
+  border: 2px solid #6a82fb;
+}
+.input > label {
+  display: block;
+  font-weight: 600;
+  line-height: 0.9rem;
+  margin: 0px;
+  height: max-content;
+  width: 100%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  padding: 5px 0px 0px 5px;
+  align-self: flex-start;
+}
+.input > input {
+  background-color: transparent;
+  border-style: hidden;
+  border: 0 none;
+  height: inherit;
+  padding: 1rem 0px 0px 6px;
+  width: 100%;
+}
+.input > input,
+.input > input::-webkit-input-placeholder,
+.input > input::placeholder {
+  color: #7a848d;
+  font: 500 15px/150% sans-serif;
+  opacity: 1;
+}
+.input > input:focus,
+.input > label {
+  outline: none;
+  color: #182931;
+}
+button {
+  padding: 12px 25px;
+  font-weight: 600;
+  text-decoration: none;
+  background-color: #6a82fb;
+  color: #ffffff;
+  text-align: center;
+  border: 0 none;
+  width: 100%;
+}
+
+button:hover,
+button:active {
+  background-color: #fc5c7d;
+  text-decoration: none;
+  cursor: pointer;
+}
+button:focus {
+  outline: currentcolor none medium;
+  box-shadow: 0 0 0 4px #6a82fb;
+  color: #182931;
+  background: #ffffff;
+  text-decoration: none;
+}
+p {
+  font-size: 0.8rem;
+  color: #7a848d;
+}
+p a {
+  color: inherit;
+}
+form {
+  display: grid;
+  gap: 16px;
+}
+h1 {
+  margin-top: 0;
+  text-align: center;
+  color: #182931;
+}
+
+#passkeySupported,#passkeyNotSupported {
+  display: none;
+}

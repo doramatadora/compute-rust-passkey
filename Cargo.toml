@@ -1,0 +1,20 @@
+[package]
+name = "compute-rust-passkey"
+version = "0.1.0"
+edition = "2021"
+# Remove this line if you want to be able to publish this crate as open source on crates.io.
+# Otherwise, `publish = false` prevents an accidental `cargo publish` from revealing private source.
+publish = false
+
+[profile.release]
+debug = 1
+
+[dependencies]
+fastly = "0.9.1"
+serde = { version = "1.0.152", features = ["derive"] }
+rand = { version = "0.8.5" }
+webauthn-rs = "0.4.8"
+uuid = { version = "1.2.2", features = ["v4"] }
+url = "2.3.1"
+base64urlsafedata = "0.1.2"
+
