@@ -12,6 +12,11 @@ const INDEX_HTML: &str = include_str!("assets/index.html");
 const STYLE_CSS: &str = include_str!("assets/style.css");
 const WEBAUTHN_JS: &[u8] = include_bytes!("assets/webauthn.js");
 
+const RP_ID: &str = "localhost";
+const RP_ORIGIN: &str = "http://localhost:7676";
+// const RP_ID: &str = "passkey-demo.edgecompute.app";
+// const RP_ORIGIN: &str = "https://passkey-demo.edgecompute.app";
+
 // const CUSTOM_ENGINE: engine::GeneralPurpose =
 //     engine::GeneralPurpose::new(&alphabet::URL_SAFE, general_purpose::NO_PAD);
 
@@ -28,10 +33,9 @@ struct RegResp {
 
 #[fastly::main]
 fn main(mut req: Request) -> Result<Response, Error> {
-    let rp_id = "localhost";
-    let rp_origin = Url::parse("http://localhost:7676").expect("Invalid relying party URL.");
+    let rp_origin = Url::parse(RP_ORIGIN).expect("Invalid relying party URL.");
     let builder =
-        WebauthnBuilder::new(rp_id, &rp_origin).expect("Invalid WebAuthn configuration.");
+        WebauthnBuilder::new(RP_ID, &rp_origin).expect("Invalid WebAuthn configuration.");
     let webauthn = builder.build().expect("Invalid WebAuthn configuration.");
 
     // Username to UUID mapping.
@@ -103,7 +107,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
                 .insert(&user_id.to_string(), serde_json::to_string(&reg_state)?)
                 .expect("Failed to store registration state.");
 
-            println!("reg_state {:#?}", reg_state);
+            println!("DEBUG reg_state {:?}", reg_state);
 
             Ok(Response::from_status(StatusCode::OK)
                 .with_body_json(&creation_challenge_response)?)
@@ -112,7 +116,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
         (&Method::POST, "/registration/finish") => {
             let reg = req.take_body_json::<RegResp>().unwrap();
 
-            println!("reg.response {:#?}", reg.response);
+            println!("DEBUG reg.response {:?}", reg.response);
             
             // Retrieve UUID for the username.
             let user_id = users.lookup_str(&reg.username)?.unwrap();
@@ -120,7 +124,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
             let rs = state.lookup_str(&user_id).expect("Session corrupted.");
             let reg_state = serde_json::from_str::<PasskeyRegistration>(&rs.unwrap())?;
             
-            println!("reg_state {:#?}", reg_state);
+            println!("DEBUG reg_state {:?}", reg_state);
 
             let passkey_registration = webauthn
                 .finish_passkey_registration(&reg.response, &reg_state)
