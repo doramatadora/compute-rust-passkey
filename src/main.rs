@@ -103,10 +103,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
                 .insert(&user_id.to_string(), serde_json::to_string(&reg_state)?)
                 .expect("Failed to store registration state.");
 
-            println!(
-                "user_id: {}, name {}, skr {:?}, ccr {:?}",
-                user_id, reg.username, reg_state, creation_challenge_response
-            );
+            println!("reg_state {:#?}", reg_state);
 
             Ok(Response::from_status(StatusCode::OK)
                 .with_body_json(&creation_challenge_response)?)
@@ -114,13 +111,16 @@ fn main(mut req: Request) -> Result<Response, Error> {
         // Registration - finish (verify).
         (&Method::POST, "/registration/finish") => {
             let reg = req.take_body_json::<RegResp>().unwrap();
+
+            println!("reg.response {:#?}", reg.response);
+            
             // Retrieve UUID for the username.
             let user_id = users.lookup_str(&reg.username)?.unwrap();
             // Retrieve and deserialize registration state for the UUID.
             let rs = state.lookup_str(&user_id).expect("Session corrupted.");
             let reg_state = serde_json::from_str::<PasskeyRegistration>(&rs.unwrap())?;
             
-            println!("reg_state {:?}, reg_response {:?}", reg_state, reg.response);
+            println!("reg_state {:#?}", reg_state);
 
             let passkey_registration = webauthn
                 .finish_passkey_registration(&reg.response, &reg_state)
