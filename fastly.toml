@@ -10,3 +10,8 @@ service_id = "eTTpbWkSVWbN3w3JnVgwN5"
 
 [scripts]
   build = "cargo build --bin compute-rust-passkey --release --target wasm32-wasi --color always"
+
+[local_server]
+  object_store.users = []
+  object_store.state = []
+  object_store.keys = []

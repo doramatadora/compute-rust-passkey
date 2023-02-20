@@ -7,16 +7,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <title>Passwordless login on Fastly's Compute@Edge</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/@simplewebauthn/browser"></script>
   <script src="auth.js" async module></script>
-  <meta http-equiv="content-security-policy"
-    content="default-src 'none'; font-src 'self' data:; img-src 'self' data:; style-src 'self' data:; media-src 'self' data:; script-src 'unsafe-inline' data:;" />
+<!--  <meta http-equiv="content-security-policy"
+    content="default-src 'none'; font-src 'self' data:; img-src 'self' data:; style-src 'self' data:; media-src 'self' data:; script-src 'unsafe-inline' data:;" /> -->
 </head>
 
 <body>
   <main>
     <section id="passkeySupported">
       <h1>🔒 Look ma, no password!</h1>
-      <form action="" method="post">
+      <form action="" method="post" id="passkeyForm">
         <div class="input">
           <label for="name">name</label>
           <input type="text" id="name" name="name" placeholder="Example username" required />
