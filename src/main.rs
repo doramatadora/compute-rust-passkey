@@ -42,6 +42,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
     let mut keys = ObjectStore::open("keys")?.unwrap();
 
     match (req.get_method(), req.get_path()) {
+        // Base HTML.
         (&Method::GET, "/robots.txt") => Ok(Response::from_status(StatusCode::OK)
             .with_body_text_plain("User-agent: *\nDisallow: /\n")),
         (&Method::GET, "/favicon.ico") => Ok(Response::from_status(StatusCode::NOT_FOUND)),
@@ -54,7 +55,8 @@ fn main(mut req: Request) -> Result<Response, Error> {
         (&Method::GET, "/") => {
             Ok(Response::from_status(StatusCode::OK).with_body_text_html(INDEX_HTML))
         }
-        (&Method::POST, "/registration/options") => {
+        // Registration - start.
+        (&Method::POST, "/registration/start") => {
             let reg = req.take_body_json::<Form>().unwrap();
             // 1. Presented credentials may *only* provide the uuid, and not the username!
             // 2. If the user has any other credentials, we need to exclude these from being re-registered.
@@ -109,11 +111,15 @@ fn main(mut req: Request) -> Result<Response, Error> {
             Ok(Response::from_status(StatusCode::OK)
                 .with_body_json(&creation_challenge_response)?)
         }
-        (&Method::POST, "/registration/verification") => {
+        // Registration - finish (verify).
+        (&Method::POST, "/registration/finish") => {
             let reg = req.take_body_json::<RegResp>().unwrap();
+            // Retrieve UUID for the username.
             let user_id = users.lookup_str(&reg.username)?.unwrap();
+            // Retrieve and deserialize registration state for the UUID.
             let rs = state.lookup_str(&user_id).expect("Session corrupted.");
             let reg_state = serde_json::from_str::<PasskeyRegistration>(&rs.unwrap())?;
+            
             println!("reg_state {:?}, reg_response {:?}", reg_state, reg.response);
 
             let passkey_registration = webauthn
@@ -124,7 +130,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
             keys.insert(&user_id, serde_json::to_string(&passkey_registration)?)
                 .expect("Failed to store passkey.");
 
-            Ok(Response::from_status(StatusCode::OK).with_body_json(&passkey_registration)?)
+            Ok(Response::from_status(StatusCode::OK))
         }
         _ => Ok(Response::from_status(StatusCode::NOT_FOUND)),
     }
