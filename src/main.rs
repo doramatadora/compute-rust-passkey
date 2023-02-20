@@ -20,17 +20,6 @@ struct Form {
     username: String,
 }
 
-// #[derive(serde::Deserialize, serde::Serialize)]
-// struct UserState {
-//     id: Uuid,
-//     reg_state: Option<PasskeyRegistration>,
-// }
-
-#[derive(Deserialize, Serialize)]
-struct UserKeys {
-    keys: Vec<Passkey>,
-}
-
 #[derive(Deserialize, Serialize, Debug)]
 struct RegResp {
     username: String,
@@ -41,15 +30,15 @@ struct RegResp {
 fn main(mut req: Request) -> Result<Response, Error> {
     let rp_id = "localhost";
     let rp_origin = Url::parse("http://localhost:7676").expect("Invalid relying party URL.");
-    let mut builder =
+    let builder =
         WebauthnBuilder::new(rp_id, &rp_origin).expect("Invalid WebAuthn configuration.");
     let webauthn = builder.build().expect("Invalid WebAuthn configuration.");
 
-    // Username to UUID mapping
+    // Username to UUID mapping.
     let mut users = ObjectStore::open("users")?.unwrap();
-    // UUID to registration state mapping
+    // UUID to registration (& auth, in the future) state mapping.
     let mut state = ObjectStore::open("state")?.unwrap();
-    // UUID to passkeys mapping
+    // UUID to passkeys mapping.
     let mut keys = ObjectStore::open("keys")?.unwrap();
 
     match (req.get_method(), req.get_path()) {
@@ -66,12 +55,12 @@ fn main(mut req: Request) -> Result<Response, Error> {
             Ok(Response::from_status(StatusCode::OK).with_body_text_html(INDEX_HTML))
         }
         (&Method::POST, "/registration/options") => {
-            let opts = req.take_body_json::<Form>().unwrap();
+            let reg = req.take_body_json::<Form>().unwrap();
             // 1. Presented credentials may *only* provide the uuid, and not the username!
             // 2. If the user has any other credentials, we need to exclude these from being re-registered.
-            let (user_id, exclude_credentials) = match users.lookup_str(&opts.username) {
+            let (user_id, exclude_credentials) = match users.lookup_str(&reg.username) {
                 Ok(Some(id)) => {
-                    println!("Existing uid for {} is {}", opts.username, id);
+                    println!("Existing uid for {} is {}", reg.username, id);
                     match keys.lookup_str(&id) {
                         Ok(Some(k)) => {
                             let existing: Vec<Passkey> = serde_json::from_str(&k).unwrap();
@@ -91,18 +80,17 @@ fn main(mut req: Request) -> Result<Response, Error> {
                 _ => {
                     let id = Uuid::new_v4();
                     users
-                        .insert(&opts.username, id.to_string())
+                        .insert(&reg.username, id.to_string())
                         .expect("Failed to register new UUID.");
                     (id, None)
                 }
             };
 
-            // Initiate a basic registration flow to enroll a cryptographic authenticator
             let (creation_challenge_response, reg_state) = webauthn
                 .start_passkey_registration(
                     user_id,
-                    &opts.username,
-                    &opts.username,
+                    &reg.username,
+                    &reg.username,
                     exclude_credentials,
                 )
                 .expect("Failed to start registration.");
@@ -115,7 +103,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
 
             println!(
                 "user_id: {}, name {}, skr {:?}, ccr {:?}",
-                user_id, opts.username, reg_state, creation_challenge_response
+                user_id, reg.username, reg_state, creation_challenge_response
             );
 
             Ok(Response::from_status(StatusCode::OK)
@@ -123,16 +111,20 @@ fn main(mut req: Request) -> Result<Response, Error> {
         }
         (&Method::POST, "/registration/verification") => {
             let reg = req.take_body_json::<RegResp>().unwrap();
+            let user_id = users.lookup_str(&reg.username)?.unwrap();
+            let rs = state.lookup_str(&user_id).expect("Session corrupted.");
+            let reg_state = serde_json::from_str::<PasskeyRegistration>(&rs.unwrap())?;
+            println!("reg_state {:?}, reg_response {:?}", reg_state, reg.response);
 
-            // Initiate a basic registration flow to enroll a cryptographic authenticator
-            // let (sk) = webauthn
-            //     .finish_passkey_registration(&reg.response, &reg_state)
-            //     .expect("Failed to start registration.");
+            let passkey_registration = webauthn
+                .finish_passkey_registration(&reg.response, &reg_state)
+                .expect("Failed to finish registration.");
 
-            println!("registration verification");
-            println!("body {:?}", reg);
-            // webauthn.finish_passkey_registration(reg, state);
-            Ok(Response::from_status(StatusCode::OK))
+            // TODO: This needs to be an array of keys.
+            keys.insert(&user_id, serde_json::to_string(&passkey_registration)?)
+                .expect("Failed to store passkey.");
+
+            Ok(Response::from_status(StatusCode::OK).with_body_json(&passkey_registration)?)
         }
         _ => Ok(Response::from_status(StatusCode::NOT_FOUND)),
     }
