@@ -51,17 +51,44 @@ if (
           });
           // Display outcome
           if (regFinishResp.ok === true) {
-            alert("Success! Now try to authenticate...");
+            alert(`Success! Now try to authenticate...`);
           } else {
             alert(`Registration failed`);
           }
         });
-        AUTHENTICATE_BUTTON.addEventListener("click", (e) => {
-          PASSKEY_FORM.action = "/authenticate";
+        AUTHENTICATE_BUTTON.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const authStartResp = await fetch("/authentication/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: USER_NAME.value,
+            }),
+          });
+          const authenticationOptionsJSON = await authStartResp.json();
+          console.log({ authenticationOptionsJSON });
+          // Start WebAuthn authentication
+          const authResp = await startAuthentication(authenticationOptionsJSON);
+          console.log({ authResp });
+          // Submit response
+          const authFinishResp = await fetch("/authentication/finish", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: USER_NAME.value,
+              response: authResp,
+            }),
+          });
+          // Display outcome
+          if (authFinishResp.ok === true) {
+            alert(`Success! You're authenticated`);
+          } else {
+            alert(`Authentication failed`);
+          }
         });
       } else {
         throw new Error(
-          "User verifying platform authenticator is not available."
+          `User verifying platform authenticator is not available.`
         );
       }
     })
