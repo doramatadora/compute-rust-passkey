@@ -31,11 +31,17 @@ struct RegResp {
     response: RegisterPublicKeyCredential,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
+struct AuthResp {
+    username: String,
+    response: PublicKeyCredential,
+}
+
 #[fastly::main]
 fn main(mut req: Request) -> Result<Response, Error> {
+    // Initialize WebAuthn, which has no mutable inner state.
     let rp_origin = Url::parse(RP_ORIGIN).expect("Invalid relying party URL.");
-    let builder =
-        WebauthnBuilder::new(RP_ID, &rp_origin).expect("Invalid WebAuthn configuration.");
+    let builder = WebauthnBuilder::new(RP_ID, &rp_origin).expect("Invalid WebAuthn configuration.");
     let webauthn = builder.build().expect("Invalid WebAuthn configuration.");
 
     // Username to UUID mapping.
@@ -46,7 +52,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
     let mut keys = ObjectStore::open("keys")?.unwrap();
 
     match (req.get_method(), req.get_path()) {
-        // Base HTML.
+        // Frontend stuff.
         (&Method::GET, "/robots.txt") => Ok(Response::from_status(StatusCode::OK)
             .with_body_text_plain("User-agent: *\nDisallow: /\n")),
         (&Method::GET, "/favicon.ico") => Ok(Response::from_status(StatusCode::NOT_FOUND)),
@@ -59,14 +65,19 @@ fn main(mut req: Request) -> Result<Response, Error> {
         (&Method::GET, "/") => {
             Ok(Response::from_status(StatusCode::OK).with_body_text_html(INDEX_HTML))
         }
+
         // Registration - start.
+        // Responding by providing the challenge to the browser.
         (&Method::POST, "/registration/start") => {
-            let reg = req.take_body_json::<Form>().unwrap();
+            println!("DEBUG start registration");
+
+            let form = req.take_body_json::<Form>().unwrap();
+
             // 1. Presented credentials may *only* provide the uuid, and not the username!
             // 2. If the user has any other credentials, we need to exclude these from being re-registered.
-            let (user_id, exclude_credentials) = match users.lookup_str(&reg.username) {
+            let (user_id, exclude_credentials) = match users.lookup_str(&form.username) {
                 Ok(Some(id)) => {
-                    println!("Existing uid for {} is {}", reg.username, id);
+                    println!("Existing uid for {} is {}", form.username, id);
                     match keys.lookup_str(&id) {
                         Ok(Some(k)) => {
                             let existing: Vec<Passkey> = serde_json::from_str(&k).unwrap();
@@ -86,7 +97,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
                 _ => {
                     let id = Uuid::new_v4();
                     users
-                        .insert(&reg.username, id.to_string())
+                        .insert(&form.username, id.to_string())
                         .expect("Failed to register new UUID.");
                     (id, None)
                 }
@@ -95,8 +106,8 @@ fn main(mut req: Request) -> Result<Response, Error> {
             let (creation_challenge_response, reg_state) = webauthn
                 .start_passkey_registration(
                     user_id,
-                    &reg.username,
-                    &reg.username,
+                    &form.username,
+                    &form.username,
                     exclude_credentials,
                 )
                 .expect("Failed to start registration.");
@@ -112,30 +123,133 @@ fn main(mut req: Request) -> Result<Response, Error> {
             Ok(Response::from_status(StatusCode::OK)
                 .with_body_json(&creation_challenge_response)?)
         }
+
         // Registration - finish (verify).
+        // The browser has completed its steps and the user has created a public key
+        // on their device. Now we have the registration options sent to us, and we need
+        // to verify these and persist them.
         (&Method::POST, "/registration/finish") => {
+            println!("DEBUG finish registration");
+
             let reg = req.take_body_json::<RegResp>().unwrap();
 
             println!("DEBUG reg.response {:?}", reg.response);
-            
+
             // Retrieve UUID for the username.
-            let user_id = users.lookup_str(&reg.username)?.unwrap();
+            let user_id = users
+                .lookup_str(&reg.username)
+                .expect("User not found")
+                .unwrap();
+
             // Retrieve and deserialize registration state for the UUID.
-            let rs = state.lookup_str(&user_id).expect("Session corrupted.");
-            let reg_state = serde_json::from_str::<PasskeyRegistration>(&rs.unwrap())?;
-            
+            let st = state
+                .lookup_str(&user_id)
+                .expect("Couldn't retrieve registration state.")
+                .unwrap();
+            let reg_state =
+                serde_json::from_str::<PasskeyRegistration>(&st).expect("Session corrupted.");
+
             println!("DEBUG reg_state {:?}", reg_state);
 
             let passkey_registration = webauthn
                 .finish_passkey_registration(&reg.response, &reg_state)
                 .expect("Failed to finish registration.");
 
-            // TODO: This needs to be an array of keys.
+            // TODO: This needs to be an array of credentials.
             keys.insert(&user_id, serde_json::to_string(&passkey_registration)?)
                 .expect("Failed to store passkey.");
 
             Ok(Response::from_status(StatusCode::OK))
         }
+
+        // Authentication - start.
+        // Now that our public key has been registered, we can authenticate a user and verify
+        // that they are the holder of that security token. We need to provide a challenge.
+        (&Method::POST, "/authentication/start") => {
+            println!("DEBUG start authentication");
+
+            let form = req.take_body_json::<Form>().unwrap();
+
+            // Retrieve UUID for the username.
+            let user_id = users
+                .lookup_str(&form.username)
+                .expect("User not found")
+                .unwrap();
+
+            // Retrieve and deserialize the user's set of credentials.
+            let credentials = keys
+                .lookup_str(&user_id)
+                .expect("Couldn't retrieve stored credentials.")
+                .unwrap();
+            let allow_credentials =
+                serde_json::from_str::<Vec<Passkey>>(&credentials).expect("Credentials corrupted.");
+
+            let (request_challenge_response, auth_state) = webauthn
+                .start_passkey_authentication(&allow_credentials)
+                .expect("Failed to start authentication.");
+
+            println!("DEBUG auth_state {:?}", auth_state);
+
+            // Safe to store the auth_state into the object store since it is not client controlled.
+            // If this was a cookie store, this would be UNSAFE (open to replay attacks).
+            state
+                .insert(&user_id.to_string(), serde_json::to_string(&auth_state)?)
+                .expect("Failed to store auth state.");
+
+            Ok(
+                Response::from_status(StatusCode::OK)
+                    .with_body_json(&request_challenge_response)?,
+            )
+        }
+
+        // Authentication - finish.
+        // The browser has completed its part of the processing.
+        // We need to verify that the response matches the stored auth_state.
+        (&Method::POST, "/authentication/finish") => {
+            println!("DEBUG finish authentication");
+
+            let auth = req.take_body_json::<AuthResp>().unwrap();
+
+            println!("DEBUG auth.response {:?}", auth.response);
+
+            // Retrieve UUID for the username.
+            let user_id = users
+                .lookup_str(&auth.username)
+                .expect("User not found")
+                .unwrap();
+
+            // Retrieve and deserialize auth state for the UUID.
+            let st = state
+                .lookup_str(&user_id)
+                .expect("Couldn't retrieve auth state.")
+                .unwrap();
+            let auth_state =
+                serde_json::from_str::<PasskeyAuthentication>(&st).expect("Session corrupted.");
+
+            println!("DEBUG auth_state {:?}", auth_state);
+
+            let auth_result = webauthn
+                .finish_passkey_authentication(&auth.response, &auth_state)
+                .expect("Failed to finish authentication.");
+
+            // Retrieve and update the user's set of credentials.
+            let credentials = keys
+                .lookup_str(&user_id)
+                .expect("Couldn't retrieve stored credentials.")
+                .unwrap();
+            let mut updated_credentials =
+                serde_json::from_str::<Vec<Passkey>>(&credentials).expect("Credentials corrupted.");
+            updated_credentials.iter_mut().for_each(|sk| {
+                // This will only update the credential if it's matching the one used for auth.
+                sk.update_credential(&auth_result);
+            });
+            // Save the updated credentials.
+            keys.insert(&user_id, serde_json::to_string(&updated_credentials)?)
+                .expect("Failed to update credentials.");
+
+            Ok(Response::from_status(StatusCode::OK))
+        }
+
         _ => Ok(Response::from_status(StatusCode::NOT_FOUND)),
     }
 }
