@@ -1,6 +1,9 @@
 # Passkeys on Compute@Edge
 
+Build openssl-wasm with `bn_ops` set to `THIRTY_TWO_BIT RC4_CHAR`.
+
 You want to set the `OPENSSL_DIR` env variable to point to `openssl-wasm/precompiled`, and `OPENSSL_STATIC` to `1`.
+
 
 ```sh
 export OPENSSL_STATIC=1

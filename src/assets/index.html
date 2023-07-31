@@ -9,14 +9,17 @@
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/@simplewebauthn/browser"></script>
   <script src="auth.js" async module></script>
-<!--  <meta http-equiv="content-security-policy"
+  <!--  <meta http-equiv="content-security-policy"
     content="default-src 'none'; font-src 'self' data:; img-src 'self' data:; style-src 'self' data:; media-src 'self' data:; script-src 'unsafe-inline' data:;" /> -->
 </head>
 
-<body>
+<body>  
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="announcer"></div>
   <main>
     <section id="passkeySupported">
       <h1>🔒 Look ma, no password!</h1>
+      <p>This is a demo, so you can register keys under any name.</p>  
       <form action="" method="post" id="passkeyForm">
         <div class="input">
           <label for="name">name</label>
@@ -26,8 +29,11 @@
         <button type="submit" id="authenticate">2. Authenticate</button>
         <p>
           Welcome to a passwordless world, powered by <a href="https://passkeys.dev/" target="_blank">passkeys</a> and
-          <a href="https://www.fastly.com/products/edge-compute" target="_blank">Fastly's Compute@Edge</a>.</b>
+          <a href="https://www.fastly.com/products/edge-compute" target="_blank">Fastly's Compute@Edge</a> and <a
+          href="https://www.fastly.com/blog/introducing-object-store-enabling-powerful-applications-at-the-edge"
+          target="_blank">KV Store</a>.
         </p>
+       
       </form>
     </section>
     <section id="passkeyNotSupported">

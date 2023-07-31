@@ -1,5 +1,5 @@
 use fastly::http::{Method, StatusCode};
-use fastly::{mime, Error, ObjectStore, Request, Response};
+use fastly::{mime, Error, KVStore, Request, Response};
 use serde::{Deserialize, Serialize};
 use webauthn_rs::prelude::*;
 // use base64::{
@@ -10,7 +10,7 @@ use webauthn_rs::prelude::*;
 
 const INDEX_HTML: &str = include_str!("assets/index.html");
 const STYLE_CSS: &str = include_str!("assets/style.css");
-const WEBAUTHN_JS: &[u8] = include_bytes!("assets/webauthn.js");
+const AUTH_JS: &[u8] = include_bytes!("assets/auth.js");
 
 const RP_ID: &str = "localhost";
 const RP_ORIGIN: &str = "http://localhost:7676";
@@ -45,11 +45,11 @@ fn main(mut req: Request) -> Result<Response, Error> {
     let webauthn = builder.build().expect("Invalid WebAuthn configuration.");
 
     // Username to UUID mapping.
-    let mut users = ObjectStore::open("users")?.unwrap();
+    let mut users = KVStore::open("users")?.unwrap();
     // UUID to registration (& auth, in the future) state mapping.
-    let mut state = ObjectStore::open("state")?.unwrap();
+    let mut state = KVStore::open("state")?.unwrap();
     // UUID to passkeys mapping.
-    let mut keys = ObjectStore::open("keys")?.unwrap();
+    let mut keys = KVStore::open("keys")?.unwrap();
 
     match (req.get_method(), req.get_path()) {
         // Frontend stuff.
@@ -61,7 +61,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
             .with_body(STYLE_CSS)),
         (&Method::GET, "/auth.js") => Ok(Response::from_status(StatusCode::OK)
             .with_content_type(mime::APPLICATION_JAVASCRIPT_UTF_8)
-            .with_body_octet_stream(WEBAUTHN_JS)),
+            .with_body_octet_stream(AUTH_JS)),
         (&Method::GET, "/") => {
             Ok(Response::from_status(StatusCode::OK).with_body_text_html(INDEX_HTML))
         }
@@ -154,9 +154,17 @@ fn main(mut req: Request) -> Result<Response, Error> {
             let passkey_registration = webauthn
                 .finish_passkey_registration(&reg.response, &reg_state)
                 .expect("Failed to finish registration.");
+            
+            // Get existing keys for the user, if any.
+            let credentials = match keys.lookup_str(&user_id) {
+                Ok(Some(creds)) => creds,
+                _ => "[]".to_owned(),
+            };
 
-            // TODO: This needs to be an array of credentials.
-            keys.insert(&user_id, serde_json::to_string(&passkey_registration)?)
+            let mut existing_keys = serde_json::from_str::<Vec<Passkey>>(&credentials).expect("Credentials corrupted.");
+            existing_keys.push(passkey_registration.clone());
+
+            keys.insert(&user_id, serde_json::to_string(&existing_keys)?)
                 .expect("Failed to store passkey.");
 
             Ok(Response::from_status(StatusCode::OK))
@@ -181,6 +189,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
                 .lookup_str(&user_id)
                 .expect("Couldn't retrieve stored credentials.")
                 .unwrap();
+            println!("DEBUG credentials {:?}", credentials);
             let allow_credentials =
                 serde_json::from_str::<Vec<Passkey>>(&credentials).expect("Credentials corrupted.");
 
@@ -189,6 +198,8 @@ fn main(mut req: Request) -> Result<Response, Error> {
                 .expect("Failed to start authentication.");
 
             println!("DEBUG auth_state {:?}", auth_state);
+
+            println!("DEBUG request_challenge_response {:?}", request_challenge_response);
 
             // Safe to store the auth_state into the object store since it is not client controlled.
             // If this was a cookie store, this would be UNSAFE (open to replay attacks).

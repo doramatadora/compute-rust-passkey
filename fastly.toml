@@ -12,6 +12,24 @@ service_id = "eTTpbWkSVWbN3w3JnVgwN5"
   build = "cargo build --bin compute-rust-passkey --release --target wasm32-wasi --color always"
 
 [local_server]
-  object_store.users = []
-  object_store.state = []
-  object_store.keys = []
+  [[local_server.kv_stores.users]]
+    data = "[]"
+    key = "dora"
+  [[local_server.kv_stores.state]]
+    data = "[]"
+    key = "dora"
+  [[local_server.kv_stores.keys]]
+    data = "[]"
+    key = "dora"
+
+[setup]
+
+  [setup.kv_stores]
+
+    [setup.kv_stores.passkey-users]
+      description = "Stores passkeys and persists state for the passkey demo"
+
+      [setup.kv_stores.passkey-users.items]
+
+        [setup.kv_stores.passkey-users.items.dora]
+          value = "{\"id\":\"dora\",\"name\":\"dora\",\"devices\":[]}"
