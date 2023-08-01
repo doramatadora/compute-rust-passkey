@@ -130,7 +130,6 @@ dependencies = [
 name = "compute-rust-passkey"
 version = "0.1.0"
 dependencies = [
- "base64 0.21.2",
  "fastly",
  "rand",
  "serde",
