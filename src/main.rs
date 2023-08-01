@@ -2,23 +2,15 @@ use fastly::http::{Method, StatusCode};
 use fastly::{mime, Error, KVStore, Request, Response};
 use serde::{Deserialize, Serialize};
 use webauthn_rs::prelude::*;
-// use base64::{
-//     alphabet,
-//     engine::{self, general_purpose},
-//     Engine as _,
-// };
 
 const INDEX_HTML: &str = include_str!("assets/index.html");
 const STYLE_CSS: &str = include_str!("assets/style.css");
 const AUTH_JS: &[u8] = include_bytes!("assets/auth.js");
 
-const RP_ID: &str = "localhost";
-const RP_ORIGIN: &str = "http://localhost:7676";
-// const RP_ID: &str = "passkey-demo.edgecompute.app";
-// const RP_ORIGIN: &str = "https://passkey-demo.edgecompute.app";
-
-// const CUSTOM_ENGINE: engine::GeneralPurpose =
-//     engine::GeneralPurpose::new(&alphabet::URL_SAFE, general_purpose::NO_PAD);
+// const RP_ID: &str = "localhost";
+// const RP_ORIGIN: &str = "http://localhost:7676";
+const RP_ID: &str = "passkeys.edgecompute.app";
+const RP_ORIGIN: &str = "https://passkeys.edgecompute.app";
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct Form {

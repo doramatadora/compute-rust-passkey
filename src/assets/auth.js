@@ -35,62 +35,72 @@ if (
         PASSKEY_SUPPORTED.style.display = 'block'
         REGISTER_BUTTON.addEventListener('click', async e => {
           e.preventDefault()
-          const regStartResp = await fetch('/registration/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username: USER_NAME.value
+          try {
+            const regStartResp = await fetch('/registration/start', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: USER_NAME.value
+              })
             })
-          })
-          const regOptions = await regStartResp.json()
-          console.log({ regOptions })
-          // Start WebAuthn registration
-          const regResp = await startRegistration(regOptions.publicKey)
-          console.log({ regResp })
-          // Submit response
-          const regFinishResp = await fetch('/registration/finish', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username: USER_NAME.value,
-              response: regResp
+            const regOptions = await regStartResp.json()
+            console.log({ regOptions })
+            // Start WebAuthn registration
+            const regResp = await startRegistration(regOptions.publicKey)
+            console.log({ regResp })
+            // Submit response
+            const regFinishResp = await fetch('/registration/finish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: USER_NAME.value,
+                response: regResp
+              })
             })
-          })
-          // Display outcome
-          if (regFinishResp.ok === true) {
-            announce(`Success! Now try to authenticate...`)
-          } else {
-            announce(`Registration failed`)
+            // Display outcome
+            if (regFinishResp.ok === true) {
+              announce(`Success! Now try to authenticate...`)
+            } else {
+              announce(`Registration failed`)
+            }
+          } catch (err) {
+            announce(`Error: ${err.message}`)
+            throw err
           }
         })
         AUTHENTICATE_BUTTON.addEventListener('click', async e => {
           e.preventDefault()
-          const authStartResp = await fetch('/authentication/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username: USER_NAME.value
+          try {
+            const authStartResp = await fetch('/authentication/start', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: USER_NAME.value
+              })
             })
-          })
-          const authOpts = await authStartResp.json()
-          console.log({ authOpts })
-          // Start WebAuthn authentication
-          const authResp = await startAuthentication(authOpts.publicKey)
-          console.log({ authResp })
-          // Submit response
-          const authFinishResp = await fetch('/authentication/finish', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username: USER_NAME.value,
-              response: authResp
+            const authOpts = await authStartResp.json()
+            console.log({ authOpts })
+            // Start WebAuthn authentication
+            const authResp = await startAuthentication(authOpts.publicKey)
+            console.log({ authResp })
+            // Submit response
+            const authFinishResp = await fetch('/authentication/finish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: USER_NAME.value,
+                response: authResp
+              })
             })
-          })
-          // Display outcome
-          if (authFinishResp.ok === true) {
-            announce(`Success! You're authenticated`)
-          } else {
-            announce(`Authentication failed`)
+            // Display outcome
+            if (authFinishResp.ok === true) {
+              announce(`Success! You're authenticated`)
+            } else {
+              announce(`Authentication failed`)
+            }
+          } catch (err) {
+            announce(`Error: ${err.message}`)
+            throw err
           }
         })
       } else {

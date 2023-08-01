@@ -6,30 +6,25 @@ description = "Passkey implementation with WebAuthn and Compute@Edge"
 language = "rust"
 manifest_version = 2
 name = "compute-rust-passkey"
-service_id = "eTTpbWkSVWbN3w3JnVgwN5"
+service_id = "xnlmrqP8ip48pdXb9Vpbd3"
+
+[local_server]
+
+  [local_server.backends]
+
+  [local_server.kv_stores]
+
+    [[local_server.kv_stores.keys]]
+      data = "[]"
+      key = "dora"
+
+    [[local_server.kv_stores.state]]
+      data = "[]"
+      key = "dora"
+
+    [[local_server.kv_stores.users]]
+      data = "[]"
+      key = "dora"
 
 [scripts]
   build = "cargo build --bin compute-rust-passkey --release --target wasm32-wasi --color always"
-
-[local_server]
-  [[local_server.kv_stores.users]]
-    data = "[]"
-    key = "dora"
-  [[local_server.kv_stores.state]]
-    data = "[]"
-    key = "dora"
-  [[local_server.kv_stores.keys]]
-    data = "[]"
-    key = "dora"
-
-[setup]
-
-  [setup.kv_stores]
-
-    [setup.kv_stores.passkey-users]
-      description = "Stores passkeys and persists state for the passkey demo"
-
-      [setup.kv_stores.passkey-users.items]
-
-        [setup.kv_stores.passkey-users.items.dora]
-          value = "{\"id\":\"dora\",\"name\":\"dora\",\"devices\":[]}"
