@@ -13,12 +13,12 @@ const AUTHENTICATE_BUTTON = document.getElementById('authenticate')
 const USER_NAME = document.getElementById('name')
 const ANNOUNCER = document.getElementById('announcer')
 
-const announce = msg => {
+const announce = (msg, keepMs = 3000) => {
   ANNOUNCER.innerText = msg
   ANNOUNCER.style.display = 'block'
   setTimeout(() => {
     ANNOUNCER.style.display = 'none'
-  }, 3000)
+  }, keepMs)
 }
 
 // Availability of `window.PublicKeyCredential` means WebAuthn is usable.
@@ -35,6 +35,11 @@ if (
         PASSKEY_SUPPORTED.style.display = 'block'
         REGISTER_BUTTON.addEventListener('click', async e => {
           e.preventDefault()
+          if (!USER_NAME.value.length) {
+            announce(`Please enter a username`, 2000)
+            USER_NAME.focus()
+            return
+          } 
           try {
             const regStartResp = await fetch('/registration/start', {
               method: 'POST',
@@ -44,10 +49,8 @@ if (
               })
             })
             const regOptions = await regStartResp.json()
-            console.log({ regOptions })
             // Start WebAuthn registration
             const regResp = await startRegistration(regOptions.publicKey)
-            console.log({ regResp })
             // Submit response
             const regFinishResp = await fetch('/registration/finish', {
               method: 'POST',
@@ -70,6 +73,11 @@ if (
         })
         AUTHENTICATE_BUTTON.addEventListener('click', async e => {
           e.preventDefault()
+          if (!USER_NAME.value.length) {
+            announce(`Please enter a username`, 2000)
+            USER_NAME.focus()
+            return
+          } 
           try {
             const authStartResp = await fetch('/authentication/start', {
               method: 'POST',
@@ -79,10 +87,8 @@ if (
               })
             })
             const authOpts = await authStartResp.json()
-            console.log({ authOpts })
             // Start WebAuthn authentication
             const authResp = await startAuthentication(authOpts.publicKey)
-            console.log({ authResp })
             // Submit response
             const authFinishResp = await fetch('/authentication/finish', {
               method: 'POST',
