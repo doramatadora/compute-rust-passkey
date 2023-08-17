@@ -3,6 +3,9 @@ use fastly::{mime, Error, KVStore, Request, Response};
 use serde::{Deserialize, Serialize};
 use webauthn_rs::prelude::*;
 
+const DEMO_MANIFEST: &str = include_str!("../demo/demo-manifest");
+const DEMO_SCREENSHOT: &[u8] = include_bytes!("../demo/screenshot.jpg");
+
 const INDEX_HTML: &str = include_str!("assets/index.html");
 const STYLE_CSS: &str = include_str!("assets/style.css");
 const AUTH_JS: &[u8] = include_bytes!("assets/auth.js");
@@ -44,6 +47,13 @@ fn main(mut req: Request) -> Result<Response, Error> {
     let mut keys = KVStore::open("keys")?.unwrap();
 
     match (req.get_method(), req.get_path()) {
+        // Demo metadata.
+        (&Method::GET, "/.well-known/fastly/demo-manifest") =>  Ok(Response::from_status(StatusCode::OK)
+            .with_body_text_plain(&DEMO_MANIFEST)),
+        (&Method::GET, "/images/screenshot.jpg") => Ok(Response::from_status(StatusCode::OK)
+            .with_content_type(fastly::mime::IMAGE_JPEG)
+            .with_body_octet_stream(DEMO_SCREENSHOT)),
+
         // Frontend stuff.
         (&Method::GET, "/robots.txt") => Ok(Response::from_status(StatusCode::OK)
             .with_body_text_plain("User-agent: *\nDisallow: /\n")),
