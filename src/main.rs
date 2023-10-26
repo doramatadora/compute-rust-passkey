@@ -5,13 +5,14 @@ use webauthn_rs::prelude::*;
 
 const DEMO_MANIFEST: &str = include_str!("../demo/demo-manifest");
 const DEMO_SCREENSHOT: &[u8] = include_bytes!("../demo/screenshot.jpg");
+const FIDO_DIAG: &[u8] = include_bytes!("../demo/fido.png");
 
 const INDEX_HTML: &str = include_str!("assets/index.html");
 const STYLE_CSS: &str = include_str!("assets/style.css");
 const AUTH_JS: &[u8] = include_bytes!("assets/auth.js");
 
-// const RP_ID: &str = "localhost";
-// const RP_ORIGIN: &str = "http://localhost:7676";
+//const RP_ID: &str = "localhost";
+//const RP_ORIGIN: &str = "http://localhost:7676";
 const RP_ID: &str = "passkeys.edgecompute.app";
 const RP_ORIGIN: &str = "https://passkeys.edgecompute.app";
 
@@ -53,6 +54,9 @@ fn main(mut req: Request) -> Result<Response, Error> {
         (&Method::GET, "/images/screenshot.jpg") => Ok(Response::from_status(StatusCode::OK)
             .with_content_type(fastly::mime::IMAGE_JPEG)
             .with_body_octet_stream(DEMO_SCREENSHOT)),
+        (&Method::GET, "/images/fido.png") => Ok(Response::from_status(StatusCode::OK)
+            .with_content_type(fastly::mime::IMAGE_PNG)
+            .with_body_octet_stream(FIDO_DIAG)),
 
         // Frontend stuff.
         (&Method::GET, "/robots.txt") => Ok(Response::from_status(StatusCode::OK)

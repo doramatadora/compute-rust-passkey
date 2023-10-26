@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="x-ua-compatible" content="ie=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <title>Passwordless login on Fastly's Compute@Edge</title>
+  <title>Passwordless login on Fastly Compute</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/@simplewebauthn/browser"></script>
   <script src="auth.js" async module></script>
@@ -23,13 +23,13 @@
       <form action="" method="post" id="passkeyForm">
         <div class="input">
           <label for="name">name</label>
-          <input type="text" id="name" name="name" placeholder="Example username" required />
+          <input type="text" id="name" name="name" placeholder="Example username" required autocomplete="username webauthn" />
         </div>
         <button type="submit" id="register">1. Register passkey</button>
         <button type="submit" id="authenticate">2. Authenticate</button>
         <p>
           Welcome to a passwordless world, powered by <a href="https://passkeys.dev/" target="_blank">passkeys</a> and
-          <a href="https://www.fastly.com/products/edge-compute" target="_blank">Fastly's Compute@Edge</a> and <a
+          <a href="https://www.fastly.com/products/edge-compute" target="_blank">Fastly Compute</a> and <a
           href="https://www.fastly.com/blog/introducing-object-store-enabling-powerful-applications-at-the-edge"
           target="_blank">KV Store</a>.
         </p>
@@ -41,7 +41,7 @@
       <p>
         Use a <a href="https://caniuse.com/mdn-api_publickeycredential" target="_blank">compatible browser</a> to enjoy
         a passwordless world, powered by <a href="https://passkeys.dev/" target="_blank">passkeys</a> and <a
-          href="https://www.fastly.com/products/edge-compute" target="_blank">Fastly's Compute@Edge</a>.</b>
+          href="https://www.fastly.com/products/edge-compute" target="_blank">Fastly Compute</a>.</b>
       </p>
     </section>
   </main>

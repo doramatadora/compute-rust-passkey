@@ -21,16 +21,22 @@ const announce = (msg, keepMs = 3000) => {
   }, keepMs)
 }
 
-// Availability of `window.PublicKeyCredential` means WebAuthn is usable.
-// `isUserVerifyingPlatformAuthenticatorAvailable` means the feature detection is usable.
+// Before invoking a conditional WebAuthn API call, check if:
+// The browser supports WebAuthn.
+// `isUserVerifyingPlatformAuthenticatorAvailable` – feature detection is usable.
+// `isConditionalMediationAvailable` - the browser supports WebAuthn conditional UI.
+// In practice, this means autofilling available credentials;
+// you need to include autocomplete="webauthn" on your form fields.
 if (
   window.PublicKeyCredential &&
-  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable &&  
+  PublicKeyCredential.isConditionalMediationAvailable
 ) {
   // Check if user verifying platform authenticator is available.
   PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-    .then(result => {
-      if (result) {
+    .then(result => result && PublicKeyCredential.isConditionalMediationAvailable())
+    .then(isCMA => {
+      if (isCMA) {
         // Display form to register or authenticate.
         PASSKEY_SUPPORTED.style.display = 'block'
         REGISTER_BUTTON.addEventListener('click', async e => {
@@ -73,11 +79,6 @@ if (
         })
         AUTHENTICATE_BUTTON.addEventListener('click', async e => {
           e.preventDefault()
-          if (!USER_NAME.value.length) {
-            announce(`Please enter a username`, 2000)
-            USER_NAME.focus()
-            return
-          } 
           try {
             const authStartResp = await fetch('/authentication/start', {
               method: 'POST',
@@ -88,7 +89,7 @@ if (
             })
             const authOpts = await authStartResp.json()
             // Start WebAuthn authentication
-            const authResp = await startAuthentication(authOpts.publicKey)
+            const authResp = await startAuthentication(authOpts.publicKey, true)
             // Submit response
             const authFinishResp = await fetch('/authentication/finish', {
               method: 'POST',
