@@ -1,8 +1,8 @@
-# This file describes a Fastly Compute@Edge package. To learn more visit:
+# This file describes a Fastly Compute package. To learn more visit:
 # https://developer.fastly.com/reference/fastly-toml/
 
 authors = ["dora@kalneus.com"]
-description = "Passkey implementation with WebAuthn and Compute@Edge"
+description = "Passkey implementation with WebAuthn and Fastly Compute"
 language = "rust"
 manifest_version = 2
 name = "compute-rust-passkey"
@@ -16,15 +16,15 @@ service_id = "xnlmrqP8ip48pdXb9Vpbd3"
 
     [[local_server.kv_stores.keys]]
       data = "[]"
-      key = "dora"
+      key = "test"
 
     [[local_server.kv_stores.state]]
       data = "[]"
-      key = "dora"
+      key = "test"
 
     [[local_server.kv_stores.users]]
       data = "[]"
-      key = "dora"
+      key = "test"
 
 [scripts]
   build = "cargo build --bin compute-rust-passkey --release --target wasm32-wasi --color always"
